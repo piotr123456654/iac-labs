@@ -46,7 +46,40 @@ jobs:
     - name: test
       run: |
         poetry run task test
-  formatter:
+  lint:
+
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./example-app
+    
+
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+    - name: Install Poetry Action
+      uses: snok/install-poetry@v1.3.3
+
+    - name: Install dependencies
+      run: |
+        poetry install --no-root
+    - name: Lint with flake8
+      run: |
+       poetry run task lint
+    - name: formater
+      run: |
+        poetry run task formatter
+    - name: security
+      run: |
+        poetry run task security
+    - name: test
+      run: |
+        poetry run task test
+   formatter:
 
     runs-on: ubuntu-latest
     defaults:
@@ -80,39 +113,6 @@ jobs:
       run: |
         poetry run task test
    security:
-
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./example-app
-    
-
-
-    steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.10"
-    - name: Install Poetry Action
-      uses: snok/install-poetry@v1.3.3
-
-    - name: Install dependencies
-      run: |
-        poetry install --no-root
-    - name: Lint with flake8
-      run: |
-       poetry run task lint
-    - name: formater
-      run: |
-        poetry run task formatter
-    - name: security
-      run: |
-        poetry run task security
-    - name: test
-      run: |
-        poetry run task test
-   lint:
 
     runs-on: ubuntu-latest
     defaults:
