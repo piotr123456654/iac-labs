@@ -36,6 +36,12 @@ jobs:
     - name: Lint with flake8
       run: |
        poetry run task lint
-    - name: Test with pytest
+    - name: formater
+      run: |
+        poetry run task formatter
+    - name: security
+      run: |
+        poetry run task security
+    - name: test
       run: |
         poetry run task test
