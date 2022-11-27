@@ -129,7 +129,7 @@ jobs:
       run:
         working-directory: ./example-app
         
-    needs: build
+    needs: [lint,formatter,security]
 
     steps:
     - uses: actions/checkout@v3
@@ -140,5 +140,5 @@ jobs:
     - name: unittest
       run: |
         pytest run 
-    
+
       
