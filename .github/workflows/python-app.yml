@@ -14,171 +14,130 @@ permissions:
 
 jobs:
   build:
-    strategy:
-      matrix:
-         os: [ubuntu-lates windows]
-    runs-on: ${{ matrix.os }}
-    
-    
+
+    matrix:
+        os: [ "ubuntu-latest", "windows-latest" ]
     defaults:
       run:
         working-directory: ./example-app
 
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.10"
-        
-    - name: Install Poetry Action
-      uses: snok/install-poetry@v1.3.3
-      with: 
-        virtualenvs-create: true
-        virtualenvs-in-project: true
-
-    - name: Install dependencies
-      run: |
-        poetry install --no-root
     - name: Cache build venv
       id: cached-poetry-dependencies
       uses: actions/cache@v3
       with:
-        path: /home/runner/work/iac-labs/iac-labs/example-app/.venv
+        path: /home/runner/work/iac-labs/cached/example-app/.venv
         key: ${{ runner.os }}-venv
-
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
         
   lint:
 
-    runs-on: ubuntu-latest
-    
-    concurrency:
-      group: second
+    matrix:
+        os: [ "ubuntu-latest", "windows-latest" ]
     needs: build
     defaults:
       run:
         working-directory: ./example-app
 
+    concurrency:
+      group: format-tests
+
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.10"
-
-    - name: Install Poetry Action
-      uses: snok/install-poetry@v1.3.3
-      with: 
-        virtualenvs-create: true
-        virtualenvs-in-project: true
     - name: Cache build venv
       id: cached-poetry-dependencies
       uses: actions/cache@v3
       with:
-        path: /home/runner/work/iac-labs/iac-labs/example-app/.venv
+        path: /home/runner/work/iac-labs/cached/example-app/.venv
         key: ${{ runner.os }}-venv
     - name: Lint with flake8
       run: |
-        poetry run task lint
+        pip install flake8
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        
+  formatter:
 
+    matrix:
+        os: [ "ubuntu-latest", "windows-latest" ]
+    needs: build
+    defaults:
+      run:
+        working-directory: ./example-app
+    
+    concurrency:
+      group: format-tests
 
+    steps:
+    - uses: actions/checkout@v3
+    - name: Cache build venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: /home/runner/work/iac-labs/cached/example-app/.venv
+        key: ${{ runner.os }}-venv
+    - name: Test with pytest
+      run: |
+        pip install pytest
+        pytest
         
   security:
 
-    runs-on: ubuntu-latest
-
-    concurrency:
-      group: second
+    matrix:
+        os: [ "ubuntu-latest", "windows-latest" ]
     needs: build
+    outputs:
+      packages: ${{ steps.step4.outputs.packages }}
     defaults:
       run:
         working-directory: ./example-app
-
-    steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.10"
-        
-    - name: Install Poetry Action
-      uses: snok/install-poetry@v1.3.3
-      with: 
-        virtualenvs-create: true
-        virtualenvs-in-project: true
-    - name: Cache build venv
-      id: cached-poetry-dependencies
-      uses: actions/cache@v3
-      with:
-        path: /home/runner/work/iac-labs/iac-labs/example-app/.venv
-        key: ${{ runner.os }}-venv
-
-    - name: security
-        
-      run: |
-        poetry run task test
-
-        
-  formatter:
-  
-    runs-on: ubuntu-latest
     
     concurrency:
-      group: second    
-    needs: build
-    defaults:
-      run:
-        working-directory: ./example-app
+      group: format-tests
 
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.10"
-    - name: Install Poetry Action
-      uses: snok/install-poetry@v1.3.3
-      with: 
-        virtualenvs-create: true
-        virtualenvs-in-project: true
     - name: Cache build venv
       id: cached-poetry-dependencies
       uses: actions/cache@v3
       with:
-        path: /home/runner/work/iac-labs/iac-labs/example-app/.venv
+        path: /home/runner/work/iac-labs/cached/example-app/.venv
         key: ${{ runner.os }}-venv
-    - name: formatter
+    - name: Poetry Install
+      uses: snok/install-poetry@v1
+    - name: Install dependencies
       run: |
-        poetry run task formatter        
-        
-        
-        
-  unittest:
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        poetry install
+    - name: Test with wget
+      run: |
+        nohup "$poetry run python run.py$" & timeout 3s bash -c "wget http://localhost"
+      
+  unittests:
 
-    runs-on: ubuntu-latest
-    needs: [lint, formatter, security]
+    matrix:
+        os: [ "ubuntu-latest", "windows-latest" ]
+    defaults:
+      run:
+        working-directory: ./example-app
     
-    defaults:
-      run:
-        working-directory: ./example-app
-
+    needs: [build, lint, security, formatter]
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.10"
-    - name: Install Poetry Action
-      uses: snok/install-poetry@v1.3.3
-      with: 
-        virtualenvs-create: true
-        virtualenvs-in-project: true
     - name: Cache build venv
       id: cached-poetry-dependencies
       uses: actions/cache@v3
       with:
-        path: /home/runner/work/iac-labs/iac-labs/example-app/.venv
+        path: /home/runner/work/iac-labs/cached/example-app/.venv
         key: ${{ runner.os }}-venv
-    - name: unittest
+    - name: Unit tests
       run: |
-        source $VENV poetry run task test
+        poetry tests/conftest.py
+        poetry tests/test_config.py
